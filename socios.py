@@ -2,9 +2,15 @@ class Socio(Base):
     __tablename__ = 'socios'
     id = Column(Integer, primary_key=True)
     cnpj_basico = Column(String, ForeignKey('empresas.cnpj_basico'))
+    id_socio = Column(Integer)
     nome_socio = Column(String)
-    cpf_socio = Column(String)
-    qualificacao_socio = Column(String)    
+    cpf_CNPJ_socio = Column(String)
+    qualificacao_socio = Column(String)
+    data_ent_soc = Column(Date)
+    pais_socio = Column(Integer)
+    rep_socio = Column(Integer)
+    nome_rep_socio = Column(Integer)
+    qualificacao_rep_socio = Column(Integer)
+    faixa_etaria_socio = Column(Integer)
     
-
     empresa = relationship("Empresa", back_populates="socios")
