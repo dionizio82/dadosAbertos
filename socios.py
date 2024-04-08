@@ -1,3 +1,7 @@
+from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
+
 class Socio(Base):
     __tablename__ = 'socios'
     id = Column(Integer, primary_key=True)
