@@ -12,3 +12,6 @@ class Empresa(Base):
     capital_social = Column(Float)
     porte_empresa = Column(Integer)
   
+    estabelecimentos = relationship("Estabelecimento", back_populates="empresa")
+    socios = relationship("Socio", back_populates="empresa")
+    dadosSimples = relationship("DadosSimples", back_populates="empresa")
