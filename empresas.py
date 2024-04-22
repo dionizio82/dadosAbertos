@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date
+from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -16,3 +16,8 @@ class Empresa(Base):
     estabelecimentos = relationship("Estabelecimento", back_populates="empresa")
     socios = relationship("Socio", back_populates="empresa")
     dadosSimples = relationship("DadosSimples", back_populates="empresa")
+    paises = relationship("paises", back_populates="empresa")
+    municipio = relationship("municipio", back_populates="empresa")
+    qualifica = relationship("qualifica", back_populates="empresa")
+    natureza = relationship("natureza", back_populates="empresa")
+    cnae = relationship("cnae", back_populates="empresa")
