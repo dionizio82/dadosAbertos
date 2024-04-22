@@ -10,4 +10,4 @@ class Natureza(Base):
     cod_natureza = Column(Integer)
     desc_natureza = Column(String)
 
-empresa = relationship("Empresa", back_populates="natureza")
+    empresa = relationship("Empresa", back_populates="natureza")

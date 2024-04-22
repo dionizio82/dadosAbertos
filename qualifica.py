@@ -10,4 +10,4 @@ class Qualifica(Base):
     cod_qualifica = Column(Integer)
     desc_qualifica = Column(String)
 
-empresa = relationship("Empresa", back_populates="qualifica")
+    empresa = relationship("Empresa", back_populates="qualifica")

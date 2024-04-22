@@ -10,4 +10,4 @@ class Cnae(Base):
     cod_cnae = Column(Integer)
     desc_cnae = Column(String)
 
-empresa = relationship("Empresa", back_populates="cnae")
+    empresa = relationship("Empresa", back_populates="cnae")
