@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-class natureza(Base):
+class Natureza(Base):
     __tablename__ = 'natureza'
     id = Column(Integer, primary_key=True)
     cod_natureza = Column(Integer)

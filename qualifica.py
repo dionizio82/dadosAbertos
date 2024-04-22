@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-class qualifica(Base):
+class Qualifica(Base):
     __tablename__ = 'qualifica'
     id = Column(Integer, primary_key=True)
     cod_qualifica = Column(Integer)

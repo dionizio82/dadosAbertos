@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-class cnae(Base):
+class Cnae(Base):
     __tablename__ = 'cnae'
     id = Column(Integer, primary_key=True)
     cod_cnae = Column(Integer)

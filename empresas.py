@@ -14,9 +14,9 @@ class Empresa(Base):
     porte_empresa = Column(Integer)
   
     estabelecimentos = relationship("Estabelecimento", back_populates="empresa")
-    socios = relationship("Socio", back_populates="empresa")
+    socio = relationship("Socio", back_populates="empresa")
     dadosSimples = relationship("DadosSimples", back_populates="empresa")
-    paises = relationship("paises", back_populates="empresa")
+    pais = relationship("pais", back_populates="empresa")
     municipio = relationship("municipio", back_populates="empresa")
     qualifica = relationship("qualifica", back_populates="empresa")
     natureza = relationship("natureza", back_populates="empresa")

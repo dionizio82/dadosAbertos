@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 class Socio(Base):
-    __tablename__ = 'socios'
+    __tablename__ = 'socio'
     id = Column(Integer, primary_key=True)
     cnpj_basico = Column(String, ForeignKey('empresas.cnpj_basico'))
     id_socio = Column(Integer)
@@ -20,4 +20,4 @@ class Socio(Base):
     qualificacao_rep_socio = Column(Integer)
     faixa_etaria_socio = Column(Integer)
     
-    empresa = relationship("Empresa", back_populates="socios")
+    empresa = relationship("Empresa", back_populates="socio")

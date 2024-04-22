@@ -4,10 +4,10 @@ from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-class paises(Base):
-    __tablename__ = 'paises'
+class Pais(Base):
+    __tablename__ = 'pais'
     id = Column(Integer, primary_key=True)
     cod_pais = Column(Integer)
     nome_pais = Column(String)
 
-empresa = relationship("Empresa", back_populates="paises")
+empresa = relationship("Empresa", back_populates="pais")

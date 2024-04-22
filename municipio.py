@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
-class municipio(Base):
+class Municipio(Base):
     __tablename__ = 'municipio'
     id = Column(Integer, primary_key=True)
     cod_municipio = Column(Integer)
