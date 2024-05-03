@@ -1,7 +1,6 @@
 const fs = require('fs');
 const csv = require('csv-parser');
 const { Client } = require('pg');
-const { Worker } = require('worker_threads');
 
 // Configurações do banco de dados
 const client = new Client({
@@ -11,31 +10,6 @@ const client = new Client({
   password: '852518',
   port: 5432,
 });
-
-// Iniciar um worker para processar o arquivo
-function runService(workerData) {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker('./worker.js', { workerData });
-    worker.on('message', resolve);
-    worker.on('error', reject);
-    worker.on('exit', (code) => {
-      if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));
-    });
-  });
-}
-
-async function processFile() {
-  const numWorkers = 4; // Use um número de workers baseado em núcleos
-  const promises = [];
-  for (let i = 0; i < numWorkers; i++) {
-    promises.push(runService({ filename: 'arquivo.csv', workerIndex: i, totalWorkers: numWorkers }));
-  }
-  await Promise.all(promises);
-  console.log('Processamento do CSV concluído.');
-}
-
-processFile().catch((e) => console.error(e));
-
 
 // Função auxiliar para validar e converter para inteiro
 function parseIntOrDefault(value, defaultValue = 0) {
@@ -90,7 +64,7 @@ async function saveBatchToDatabase(batch) {
 
 // Função principal para ler o arquivo CSV e salvar os dados no banco de dados
 async function processCSV() {
-  const batchSize = 5;
+  const batchSize = 10;
   let batch = [];
 
   try {
@@ -114,14 +88,11 @@ async function processCSV() {
 
         if (batch.length === batchSize) {
           saveBatchToDatabase(batch);
-          batch = [];          
+          batch = [];
         }
       })
       .on('end', () => {
-        if (batch.length > 0) {
-          saveBatchToDatabase(batch);
-          batch = [];          
-        }
+        if (batch.length > 0) saveBatchToDatabase(batch);
         console.log("Processamento do CSV concluído.");
         client.end();
       });
