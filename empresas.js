@@ -2,9 +2,16 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const { Client } = require('pg');
 
+let lastProcessedLine = 0; // Linha processada por último
+
+if (fs.existsSync('progress.txt')) {
+  lastProcessedLine = parseInt(fs.readFileSync('progress.txt', 'utf8'), 10) || 0;
+}
+
 async function processCSV() {
-  const batchSize = 1000; // Tamanho do lote
+  const batchSize = 1000;
   let batch = [];
+  let currentLine = 0;
 
   const client = new Client({
     user: 'postgres',
@@ -74,11 +81,13 @@ async function processCSV() {
     fs.createReadStream('arquivo.csv')
       .pipe(csv({
         headers: ['cnpj_basico', 'razao_social', 'natureza_juridica', 'qualificacao_responsavel', 'capital_social', 'porte_empresa'],
-        skipLines: 1,
+        skipLines: 1 + lastProcessedLine,
         separator: ';',
         mapValues: ({ value }) => typeof value === 'string' ? value.replace(/"/g, '') : value
       }))
       .on('data', async (data) => {
+        currentLine++;
+        if (currentLine <= lastProcessedLine) return;
         // Validação de dados
         if (!data.cnpj_basico || !data.razao_social) return;
 
@@ -94,11 +103,14 @@ async function processCSV() {
           await processBatch(batch);
           batch = [];
         }
+
+        fs.writeFileSync('progress.txt', currentLine.toString());
       })
       .on('end', async () => {
         if (batch.length > 0) await processBatch(batch);
         console.log("Processamento do CSV concluído.");
         await client.end();
+        fs.unlinkSync('progress.txt'); // Removendo arquivo de progresso
       });
   } catch (error) {
     console.error('Erro ao processar CSV:', error.message);
