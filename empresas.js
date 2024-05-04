@@ -1,6 +1,6 @@
 const fs = require('fs');
 const csv = require('csv-parser');
-const { Client } = require('pg');
+const { Pool } = require('pg');
 
 let lastProcessedLine = 0; // Linha processada por último
 
@@ -8,74 +8,72 @@ if (fs.existsSync('progress.txt')) {
   lastProcessedLine = parseInt(fs.readFileSync('progress.txt', 'utf8'), 10) || 0;
 }
 
-async function processCSV() {
-  const batchSize = 1000;
-  let batch = [];
-  let currentLine = 0;
+const pool = new Pool({
+  user: 'postgres',
+  host: 'localhost',
+  database: 'dados_abertos',
+  password: '852518',
+  port: 5432,
+  max: 10, // Número máximo de conexões
+});
 
-  const client = new Client({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'dados_abertos',
-    password: '852518',
-    port: 5432,
-  });
+async function processBatch(batch) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN'); // Iniciar transação
 
-  await client.connect();
-
-  const processBatch = async (batch) => {
-    const updatePromises = batch.map(async (data) => {
+    for (const data of batch) {
       const [cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa] = data;
 
-      try {
-        const existing = await client.query('SELECT * FROM empresas WHERE cnpj_basico = $1', [cnpj_basico]);
+      const existing = await client.query('SELECT * FROM empresas WHERE cnpj_basico = $1', [cnpj_basico]);
 
-        if (existing.rowCount > 0) {
-          const oldRecord = existing.rows[0];
+      if (existing.rowCount > 0) {
+        const oldRecord = existing.rows[0];
+        const hasChanges = 
+          razao_social !== oldRecord.razao_social ||
+          natureza_juridica !== oldRecord.natureza_juridica ||
+          qualificacao_responsavel !== oldRecord.qualificacao_responsavel ||
+          capital_social !== parseFloat(oldRecord.capital_social) ||
+          porte_empresa !== oldRecord.porte_empresa;
 
-          const changes = [];
-          const fields = ['razao_social', 'natureza_juridica', 'qualificacao_responsavel', 'capital_social', 'porte_empresa'];
+        if (hasChanges) {
+          await client.query(`
+            INSERT INTO empresas_history (cnpj_basico, modified_field, modified_at)
+            VALUES ($1, 'razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa', CURRENT_TIMESTAMP)`,
+            [cnpj_basico]
+          );
 
-          fields.forEach(field => {
-            if (oldRecord[field] != eval(field)) {
-              changes.push({
-                field,
-                oldValue: oldRecord[field],
-                newValue: eval(field)
-              });
-            }
-          });
-
-          for (const change of changes) {
-            await client.query(`
-              INSERT INTO empresas_history (cnpj_basico, ${change.field}, modified_field, modified_at)
-              VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-              [cnpj_basico, change.oldValue, change.field]
-            );
-          }
-
-          // Atualizando o registro
           await client.query(`
             UPDATE empresas
             SET razao_social = $2, natureza_juridica = $3, qualificacao_responsavel = $4, capital_social = $5, porte_empresa = $6, updated_at = CURRENT_TIMESTAMP
             WHERE cnpj_basico = $1`,
             [cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa]
           );
-        } else {
-          await client.query(`
-            INSERT INTO empresas (cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-            [cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa]
-          );
         }
-      } catch (error) {
-        console.error(`Erro ao processar ${cnpj_basico}:`, error.message);
+      } else {
+        await client.query(`
+          INSERT INTO empresas (cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa]
+        );
       }
-    });
+    }
 
-    await Promise.all(updatePromises); // Processando o lote de forma assíncrona
-    console.log(`Processado lote de ${batch.length} registros`);
-  };
+    await client.query('COMMIT'); // Finalizar transação
+  } catch (error) {
+    await client.query('ROLLBACK'); // Reverter transação em caso de erro
+    console.error('Erro ao processar lote:', error.message);
+  } finally {
+    client.release();
+  }
+
+  console.log(`Processado lote de ${batch.length} registros`);
+}
+
+async function processCSV() {
+  const batchSize = 5000; // Aumentando o tamanho do lote
+  let batch = [];
+  let currentLine = 0;
 
   try {
     fs.createReadStream('arquivo.csv')
@@ -88,6 +86,7 @@ async function processCSV() {
       .on('data', async (data) => {
         currentLine++;
         if (currentLine <= lastProcessedLine) return;
+
         // Validação de dados
         if (!data.cnpj_basico || !data.razao_social) return;
 
@@ -109,12 +108,12 @@ async function processCSV() {
       .on('end', async () => {
         if (batch.length > 0) await processBatch(batch);
         console.log("Processamento do CSV concluído.");
-        await client.end();
         fs.unlinkSync('progress.txt'); // Removendo arquivo de progresso
+        await pool.end(); // Encerrando todas as conexões
       });
   } catch (error) {
     console.error('Erro ao processar CSV:', error.message);
-    await client.end();
+    await pool.end(); // Encerrando todas as conexões em caso de erro
   }
 }
 
