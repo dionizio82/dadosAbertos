@@ -13,14 +13,10 @@ const pool = new Pool({
 
 const logStream = fs.createWriteStream('empresasImportacao.log', { flags: 'a' });
 
-const logError = (cnpj, error) => {
-  const message = `${new Date().toISOString()} - Erro no CNPJ ${cnpj}: ${error}\n`;
+const logError = (error) => {
+  const message = `${new Date().toISOString()} - ${error}\n`;
   logStream.write(message);
-  console.error(message);
-};
-
-const convertEmptyToZero = (value) => {
-  return value.trim() === "" ? 0 : value;
+  console.error(error);
 };
 
 const processRecord = async (data) => {
@@ -29,20 +25,13 @@ const processRecord = async (data) => {
     await client.query('BEGIN');
 
     const { cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa } = data;
-    const queryParams = [
-      cnpj_basico.trim(),
-      razao_social.trim(),
-      convertEmptyToZero(natureza_juridica),
-      convertEmptyToZero(qualificacao_responsavel),
-      parseFloat(convertEmptyToZero(capital_social).replace(',', '.')),
-      convertEmptyToZero(porte_empresa)
-    ];
+    const queryParams = [cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, parseFloat(capital_social.replace(',', '.')), porte_empresa];
 
     const existing = await client.query('SELECT * FROM empresas WHERE cnpj_basico = $1', [cnpj_basico]);
     if (existing.rowCount > 0) {
       await client.query(`
-        INSERT INTO empresas_history (cnpj_basico, modified_field, modified_at)
-        VALUES ($1, 'update', CURRENT_TIMESTAMP)`, [cnpj_basico]);
+        INSERT INTO empresas_history (cnpj_basico, razao_social, natureza_juridica, qualificacao_responsavel, capital_social, porte_empresa, modified_at)
+        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`, queryParams);
     }
 
     await client.query(`
@@ -54,14 +43,14 @@ const processRecord = async (data) => {
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
-    logError(cnpj_basico, error.message);
+    logError('Erro ao processar registro: ' + error.message);
   } finally {
     client.release();
   }
 };
 
 const processCSV = async () => {
-  const fileStream = fs.createReadStream('empresas.csv', { encoding: 'utf8' })
+  const fileStream = fs.createReadStream('arquivo.csv', { encoding: 'utf8' })
     .pipe(csv({
       separator: ';',
       headers: ['cnpj_basico', 'razao_social', 'natureza_juridica', 'qualificacao_responsavel', 'capital_social', 'porte_empresa']
