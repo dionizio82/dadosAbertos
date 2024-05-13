@@ -47,7 +47,7 @@ const processRecord = async (data) => {
 };
 
 const processCSV = async () => {
-  const fileStream = fs.createReadStream('socio.csv', { encoding: 'utf8' })
+  const fileStream = fs.createReadStream('socio2.csv', { encoding: 'utf8' })
     .pipe(csv({
       separator: ';',
       headers: ['cnpj_basico', 'identificador_socio', 'nome_socio', 'cpf_cnpj_socio', 'qualificacao_socio', 'data_entrada', 'pais_socio', 'rep_legal', 'nome_rep_legal', 'qualificacao_rep_legal', 'faixa_etaria']
